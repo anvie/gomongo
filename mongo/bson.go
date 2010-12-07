@@ -435,7 +435,7 @@ func BytesToBSON(b []byte) (BSON, os.Error) {
 	bb := new(_BSONBuilder)
 	bb.ptr = &bson
 	bb.Object()
-	err := Parse(bytes.NewBuffer(b[4:len(b)]), bb)
+	err := Parse(bytes.NewBuffer(b[4:len(b)]), bb, map[string]string)
 	return bson, err
 }
 
@@ -449,7 +449,7 @@ func readCString(buf *bytes.Buffer) string {
 	return out.String()
 }
 
-func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
+func Parse(buf *bytes.Buffer, builder Builder, atreps map[string]string) (err os.Error) {
 	kind, _ := buf.ReadByte()
 	err = nil
 
@@ -462,6 +462,13 @@ func Parse(buf *bytes.Buffer, builder Builder) (err os.Error) {
 		if name == "_id" {
 			name = "id_"
 		}
+		
+		for k, v := range atreps{
+			if name == k {
+				name = v
+			}
+		}
+		
 		b2 := builder.Key(name)
 
 		switch kind {

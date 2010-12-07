@@ -242,9 +242,9 @@ func (self *structBuilder) Key(k string) Builder {
 	return nobuilder
 }
 
-func Unmarshal(b []byte, val interface{}) (err os.Error) {
+func Unmarshal(b []byte, val interface{}, atreps map[string]string) (err os.Error) {
 	sb := &structBuilder{val: reflect.NewValue(val)}
-	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb)
+	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb, atreps)
 	return
 }
 
