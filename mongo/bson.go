@@ -16,6 +16,7 @@ import (
 	"time"
 	"bytes"
 	"encoding/hex"
+	"encoding/binary"
 	"strconv"
 	"container/vector"
 )
@@ -391,6 +392,7 @@ func (self *_BSONBuilder) Put(b BSON) {
 	case self.ptr != nil:
 		*self.ptr = b
 	case self.arr != nil:
+		//fmt.Printf("self.elem: %v, self.arr: %v, b: %v\n", self.elem, self.arr, b)
 		self.arr.Set(self.elem, b)
 	case self.obj != nil:
 		self.obj[self.key] = b
@@ -433,6 +435,7 @@ func (self *_BSONBuilder) Key(key string) Builder {
 		bb2.key = key
 		bb2.obj[key] = Null
 	case *_Array:
+		//fmt.Printf("in $_Array. key: %v, obj.value: %v\n", key, obj.value)
 		bb2.arr = obj.value
 		elem, _ := strconv.Atoi(key)
 		bb2.elem = elem
@@ -455,12 +458,12 @@ func (self *_BSONBuilder) Elem(i int) Builder {
 
 func (self *_BSONBuilder) Flush() {}
 
-func BytesToBSON(b []byte) (BSON, os.Error) {
+func BytesToBSON(b []byte, atreps map[string]string) (BSON, os.Error) {
 	var bson BSON
 	bb := new(_BSONBuilder)
 	bb.ptr = &bson
 	bb.Object()
-	err := Parse(bytes.NewBuffer(b[4:len(b)]), bb, map[string]string)
+	err := Parse(bytes.NewBuffer(b[4:len(b)]), bb, atreps)
 	return bson, err
 }
 
@@ -491,6 +494,7 @@ func Parse(buf *bytes.Buffer, builder Builder, atreps map[string]string) (err os
 		for k, v := range atreps{
 			if name == k {
 				name = v
+				break
 			}
 		}
 		
@@ -505,18 +509,18 @@ func Parse(buf *bytes.Buffer, builder Builder, atreps map[string]string) (err os
 			b2.Float64(fl64)
 		case StringKind:
 			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4))
-			l := pack.Uint32(bits)
+			l := binary.LittleEndian.Uint32(bits);
 			s, _ := ioutil.ReadAll(io.LimitReader(buf, int64(l-1)))
 			buf.ReadByte()
 			b2.String(string(s))
 		case ObjectKind:
 			b2.Object()
 			ioutil.ReadAll(io.LimitReader(buf, 4))
-			err = Parse(buf, b2)
+			err = Parse(buf, b2, atreps)
 		case ArrayKind:
 			b2.Array()
 			ioutil.ReadAll(io.LimitReader(buf, 4))
-			err = Parse(buf, b2)
+			err = Parse(buf, b2, atreps)
 		case OIDKind:
 			oid, _ := ioutil.ReadAll(io.LimitReader(buf, 12))
 			b2.OID(oid)

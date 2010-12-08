@@ -38,9 +38,9 @@ type ExampleWithId struct {
 var b []byte = []byte{92, 0, 0, 0, 1, 115, 101, 99, 111, 110, 100, 0, 0, 0, 0, 0, 0, 0, 0, 64, 3, 102, 105, 102, 116, 104, 0, 23, 0, 0, 0, 2, 118, 0, 2, 0, 0, 0, 101, 0, 2, 102, 0, 2, 0, 0, 0, 105, 0, 0, 3, 102, 111, 117, 114, 116, 104, 0, 5, 0, 0, 0, 0, 2, 116, 104, 105, 114, 100, 0, 6, 0, 0, 0, 116, 104, 114, 101, 101, 0, 16, 102, 105, 114, 115, 116, 0, 1, 0, 0, 0, 0}
 
 func TestSerializeAndDeserialize(t *testing.T) {
-	obj, err := BytesToBSON(b)
+	obj, err := BytesToBSON(b,map[string]string{})
 	assertTrue(err == nil, fmt.Sprintf("failed parsing %v", b), t)
-	obj2, _ := BytesToBSON(obj.Bytes())
+	obj2, _ := BytesToBSON(obj.Bytes(),map[string]string{})
 	assertTrue(Equal(obj, obj2), fmt.Sprintf("obj != obj2 for %v", b), t)
 
 	assertTrue(obj.Get("first").Int() == 1, "obj['first'] != 1", t)
@@ -80,7 +80,7 @@ func TestMarshal(t *testing.T) {
 	var es1 ExampleStruct
 	Unmarshal(b, &es1)
 	bs1, _ := Marshal(&es1)
-	bs2, _ := BytesToBSON(b)
+	bs2, _ := BytesToBSON(b, map[string]string{})
 	assertTrue(Equal(bs1, bs2), "unmarshal->marshal", t)
 
 	m := map[string]string{"f": "i", "v": "e"}

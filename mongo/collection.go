@@ -11,6 +11,7 @@ import (
 	//"fmt"
 )
 
+type NullStrArr map[string]string
 
 type Collection struct {
 	db   *Database
@@ -19,7 +20,7 @@ type Collection struct {
 
 func (self *Collection) Drop() os.Error {
 	cmdm := map[string]string{"drop": self.name}
-	cmd, err := Marshal(cmdm)
+	cmd, err := Marshal(cmdm, NullStrArr{})
 	if err != nil {
 		return err
 	}
@@ -182,7 +183,7 @@ func (self *Collection) EnsureIndex(name string, index map[string]int) os.Error 
 	coll := self.db.GetCollection("system.indexes")
 	id := &indexDesc{name, self.fullName(), index}
 
-	desc, err := Marshal(id)
+	desc, err := Marshal(id, NullStrArr{})
 	if err != nil {
 		return err
 	}
@@ -202,7 +203,7 @@ func (self *Collection) DropIndex(name string) os.Error {
 		"index": name,
 	}
 
-	cmd, err := Marshal(cmdm)
+	cmd, err := Marshal(cmdm, NullStrArr{})
 	if err != nil {
 		return err
 	}

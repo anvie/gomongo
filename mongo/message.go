@@ -308,7 +308,7 @@ func parseReply(b []byte) *opReply {
 
 			bb.ptr = &bson
 			bb.Object()
-			Parse(buf, bb)
+			Parse(buf, bb, map[string]string{})
 			r.documents.Push(bson)
 			ioutil.ReadAll(io.LimitReader(buf, 4))
 		}

@@ -20,7 +20,7 @@ func (self *Database) GetCollection(name string) *Collection {
 }
 
 func (self *Database) Drop() os.Error {
-	cmd, err := Marshal(map[string]int{"dropDatabase": 1})
+	cmd, err := Marshal(map[string]int{"dropDatabase": 1}, map[string]string{})
 	if err != nil {
 		return err
 	}

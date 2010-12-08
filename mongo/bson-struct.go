@@ -267,7 +267,7 @@ func Unmarshal(b []byte, val interface{}, atreps map[string]string) (err os.Erro
 	return
 }
 
-func Marshal(val interface{}) (BSON, os.Error) {
+func Marshal(val interface{}, atreps map[string]string) (BSON, os.Error) {
 	if val == nil {
 		return Null, nil
 	}
@@ -309,7 +309,7 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		t := fv.Type().(*reflect.StructType)
 		for i := 0; i < t.NumField(); i++ {
 			key := strings.ToLower(t.Field(i).Name)
-			el, err := Marshal(fv.Field(i).Interface())
+			el, err := Marshal(fv.Field(i).Interface(), atreps)
 			if err != nil {
 				return nil, err
 			}
@@ -319,6 +319,14 @@ func Marshal(val interface{}) (BSON, os.Error) {
 			if key == "id_" {
 				key = "_id"
 			}
+			
+			for k, v := range atreps{
+				if key == v {
+					key = k
+					break
+				}
+			}
+
 			o.value[key] = el
 		}
 		return o, nil
@@ -332,7 +340,7 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		keys := fv.Keys()
 		for _, k := range keys {
 			sk := k.(*reflect.StringValue).Get()
-			el, err := Marshal(fv.Elem(k).Interface())
+			el, err := Marshal(fv.Elem(k).Interface(), atreps)
 			if err != nil {
 				return nil, err
 			}
@@ -346,7 +354,7 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		} else {
 			a := &_Array{new(vector.Vector), _Null{}}
 			for i := 0; i < fv.Len(); i++ {
-				el, err := Marshal(fv.Elem(i).Interface())
+				el, err := Marshal(fv.Elem(i).Interface(), atreps)
 				if err != nil {
 					return nil, err
 				}
