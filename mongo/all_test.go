@@ -75,7 +75,22 @@ func TestOtherStuff(t *testing.T) {
 	query, _ := Marshal(map[string]string{"_id": "doc1"})
 	got, _ := collection.FindOne(query)
 	assertTrue(Equal(doc, got), "equal", t)
+}
 
+type bin struct {
+	Id string
+	Bin []byte
+}
+
+func TestBinary(t *testing.T) {
+	doc, _ := Marshal(&bin{"doc1", []byte{0,1,2,3,4,5,6,7,8,9}})
+	conn, _ := Connect("127.0.0.1")
+	collection := conn.GetDB("test").GetCollection("test_collection")
+	collection.Insert(doc)
+
+	query, _ := Marshal(map[string]string{"id": "doc1"})
+	got, _ := collection.FindOne(query)
+	assertTrue(Equal(doc.Get("bin"), got.Get("bin")), "bin equal", t)
 }
 
 const (

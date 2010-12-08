@@ -152,6 +152,25 @@ func (self *structBuilder) OID(oid []byte) {
 	}
 }
 
+func (self *structBuilder) Binary(b []byte) {
+	if self == nil {
+		return
+	}
+
+	if v, ok := self.val.(*reflect.SliceValue); ok {
+		if v.Len() < len(b) {
+			nv := reflect.MakeSlice(v.Type().(*reflect.SliceType), len(b), len(b))
+			v.Set(nv)
+		}
+		for i := 0; i < len(b); i++ {
+			v.Elem(i).(*reflect.UintValue).Set(uint64(b[i]))
+		}
+		
+
+//		v.Set(b)
+	}
+}
+
 func (self *structBuilder) Array() {
 	if self == nil {
 		return
@@ -321,15 +340,20 @@ func Marshal(val interface{}) (BSON, os.Error) {
 		}
 		return o, nil
 	case *reflect.SliceValue:
-		a := &_Array{new(vector.Vector), _Null{}}
-		for i := 0; i < fv.Len(); i++ {
-			el, err := Marshal(fv.Elem(i).Interface())
-			if err != nil {
-				return nil, err
+		if niv,e := val.([]byte); e  {
+			a := &_Binary{niv, _Null{}}
+			return a, nil			
+		} else {
+			a := &_Array{new(vector.Vector), _Null{}}
+			for i := 0; i < fv.Len(); i++ {
+				el, err := Marshal(fv.Elem(i).Interface())
+				if err != nil {
+					return nil, err
+				}
+				a.value.Push(el)
 			}
-			a.value.Push(el)
+			return a, nil			
 		}
-		return a, nil
 	default:
 		return nil, os.NewError(fmt.Sprintf("don't know how to marshal %v\n", value.Type()))
 	}

@@ -54,6 +54,7 @@ type BSON interface {
 	Regex() (string, string)
 	Int() int32
 	Long() int64
+	Binary() []byte
 
 	Get(s string) BSON
 	Elem(i int) BSON
@@ -79,6 +80,7 @@ func (*_Null) Get(string) BSON         { return Null }
 func (*_Null) Elem(int) BSON           { return Null }
 func (*_Null) Len() int                { return 0 }
 func (*_Null) Bytes() []byte           { return []byte{0} }
+func (*_Null) Binary() []byte          { return nil }
 
 type _Number struct {
 	value float64
@@ -276,6 +278,23 @@ func (self *_Long) Bytes() []byte {
 	return w64
 }
 
+type _Binary struct {
+	value []byte
+	_Null
+}
+
+func (self *_Binary) Kind() int { return BinaryKind }
+func (self *_Binary) Binary() []byte { return self.value }
+func (self *_Binary) Bytes() []byte {
+	l := len(self.value)
+	ret := make([]byte,l+5)
+	pack.PutUint32(ret,uint32(l))
+	for i,v := range(self.value) {
+		ret[i+5] = v
+	}
+	return ret
+}
+
 func Equal(a, b BSON) bool {
 	switch {
 	case a == nil && b == nil:
@@ -292,6 +311,7 @@ func Equal(a, b BSON) bool {
 	case StringKind:
 		return a.String() == b.String()
 	case ObjectKind:
+
 		obj := a.(*_Object).value
 		if len(obj) != len(b.(*_Object).value) {
 			return false
@@ -314,6 +334,8 @@ func Equal(a, b BSON) bool {
 		return true
 	case OIDKind:
 		return bytes.Equal(a.OID(), b.OID())
+	case BinaryKind:
+		return bytes.Equal(a.Binary(), b.Binary())
 	case BooleanKind:
 		return a.Bool() == b.Bool()
 	case DateKind:
@@ -344,6 +366,7 @@ type Builder interface {
 	Null()
 	Object()
 	Array()
+	Binary([]byte)
 
 	// Create sub-Builders
 	Key(s string) Builder
@@ -399,6 +422,8 @@ func (self *_BSONBuilder) Regex(regex, options string) {
 func (self *_BSONBuilder) Int32(i int32) { self.Put(&_Int{i, _Null{}}) }
 func (self *_BSONBuilder) Int64(i int64) { self.Put(&_Long{i, _Null{}}) }
 func (self *_BSONBuilder) OID(o []byte)  { self.Put(&_OID{o, _Null{}}) }
+func (self *_BSONBuilder) Binary(b []byte) { self.Put(&_Binary{ b, _Null{}}) }
+
 
 func (self *_BSONBuilder) Key(key string) Builder {
 	bb2 := new(_BSONBuilder)
@@ -517,7 +542,13 @@ func Parse(buf *bytes.Buffer, builder Builder, atreps map[string]string) (err os
 		case LongKind:
 			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 8))
 			ui64 := pack.Uint64(bits)
-			b2.Int64(int64(ui64))
+			b2.Int64(int64(ui64))				
+		case BinaryKind:
+			bits, _ := ioutil.ReadAll(io.LimitReader(buf, 4))
+			l := pack.Uint32(bits)
+			bits, _ = ioutil.ReadAll(io.LimitReader(buf, 1)) // throw away a zero
+			b, _ := ioutil.ReadAll(io.LimitReader(buf,int64(l)))
+			b2.Binary(b)
 		default:
 			err = os.NewError(fmt.Sprintf("don't know how to handle kind %v yet", kind))
 		}
