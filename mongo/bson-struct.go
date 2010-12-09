@@ -319,6 +319,12 @@ func Marshal(val interface{}) (BSON, os.Error) {
 			if key == "id_" {
 				key = "_id"
 			}
+
+			// Ignore empty id's. MongoDB will add one
+			if key == "_id" && el.Len() == 0 {
+				continue;
+			}
+
 			o.value[key] = el
 		}
 		return o, nil
