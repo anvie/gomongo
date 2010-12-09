@@ -7,6 +7,7 @@ package mongo
 import (
 	"os"
 	"rand"
+	"strings"
 	//"fmt"
 )
 
@@ -104,11 +105,17 @@ func (self *Collection) Query(query BSON, skip, limit int32) (*Cursor, os.Error)
 	msg := &opQuery{o_NONE, self.fullName(), skip, limit, query}
 
 	if err := conn.sendMessageToReply(msg, reqID); err != nil {
+		if strings.HasSuffix(err.String(), "broken pipe"){
+			disconnected = true
+		}
 		return nil, err
 	}
 
 	reply, err := conn.readReply()
 	if err != nil {
+		if strings.HasSuffix(err.String(),"connection reset by peer"){
+			disconnected = true
+		}
 		return nil, err
 	}
 	if reply.responseTo != reqID {

@@ -349,6 +349,8 @@ func Marshal(val interface{}, atreps map[string]string) (BSON, os.Error) {
 					break
 				}
 			}
+			
+			//fmt.Printf("key: %v, atreps: %v\n", key, atreps)
 
 			o.value[key] = el
 		}
