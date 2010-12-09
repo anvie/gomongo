@@ -48,7 +48,6 @@ func ConnectAt(host string, port int) (*Connection, os.Error) {
 }
 
 func autoReconnect(dbcon *Connection){
-	fmt.Printf("Autoreconnect thread started\n")
 	for {
 		if disconnected == true {
 			fmt.Printf("Database server disconnected. try to reconnect.\n")
