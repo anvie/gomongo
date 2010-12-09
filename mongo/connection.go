@@ -32,7 +32,6 @@ const (
 	MAX_AUTORECONNECTION_DELAY = 20 // seconds
 )
 var autoReconnectionDelay int64 = 1
-var server Server
 var disconnected bool = true
 
 func Connect(host string, port int) (*Connection, os.Error) {
@@ -45,8 +44,6 @@ func ConnectAt(host string, port int) (*Connection, os.Error) {
 	if err != nil {
 		return nil, err
 	}
-	server.Host = host
-	server.Port = port
 	return ConnectByAddr(addr)
 }
 
