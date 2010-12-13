@@ -286,6 +286,7 @@ func (self *structBuilder) Key(k string) Builder {
 
 func Unmarshal(b []byte, val interface{}, atreps map[string]string) (err os.Error) {
 	sb := &structBuilder{val: reflect.NewValue(val)}
+	atreps["_id"] = "id_"
 	err = Parse(bytes.NewBuffer(b[4:len(b)]), sb, atreps)
 	return
 }
@@ -336,18 +337,16 @@ func Marshal(val interface{}, atreps map[string]string) (BSON, os.Error) {
 			if err != nil {
 				return nil, err
 			}
+			
 			// MongoDB uses '_id' as the primary key, but this
 			// name is private in Go. Use 'Id_' for this purpose
 			// instead.
-			if key == "id_" {
-				key = "_id"
-			}
+			if key == "id_" { key = "_id" }
 
 			// Ignore empty id's. MongoDB will add one
-			if key == "_id" && el.Len() == 0 {
+			if (key == "_id" && el.Len() == 0) {
 				continue;
 			}
-
 			
 			for k, v := range atreps{
 				if key == v {
@@ -375,9 +374,11 @@ func Marshal(val interface{}, atreps map[string]string) (BSON, os.Error) {
 			if err != nil {
 				return nil, err
 			}
+			if strings.ToLower(sk) == "id_" { sk = "_id" }
 			o.value[sk] = el
 		}
 		return o, nil
+		
 	case *reflect.SliceValue:
 		if niv,e := val.([]byte); e  {
 			a := &_Binary{niv, _Null{}}

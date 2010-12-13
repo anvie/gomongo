@@ -1,6 +1,6 @@
 include $(GOROOT)/src/Make.inc
 
-TARG=github.com/pbarrera/gomongo/mongo
+TARG=mongo
 
 GOFILES=\
 	main.go\

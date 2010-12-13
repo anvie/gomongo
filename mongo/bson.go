@@ -115,6 +115,7 @@ func (self *_String) Bytes() []byte {
 
 	return buf.Bytes()
 }
+func (self *_String) Len() int 	{ return len(self.value); }
 
 type _Object struct {
 	value map[string]BSON
@@ -297,6 +298,7 @@ func (self *_Binary) Bytes() []byte {
 }
 
 func Equal(a, b BSON) bool {
+
 	switch {
 	case a == nil && b == nil:
 		return true
@@ -483,13 +485,6 @@ func Parse(buf *bytes.Buffer, builder Builder, atreps map[string]string) (err os
 
 	for kind != EOOKind {
 		name := readCString(buf)
-		//fmt.Printf("name: %v, kind: %v\n", name, kind)
-		// MongoDB uses '_id' as the primary key, but this
-		// name is private in Go. Use 'Id_' for this purpose
-		// instead.
-		if name == "_id" {
-			name = "id_"
-		}
 		
 		for k, v := range atreps{
 			if name == k {

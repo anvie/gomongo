@@ -19,11 +19,13 @@ type IndexCmd struct {
 	Key      *KeyStruct
 }
 
+type _natreps map[string]string
+
 func TestStuff(t *testing.T) {
 	obj, err := BytesToBSON([]byte{92, 0, 0, 0, 1, 115, 101, 99, 111, 110, 100, 0, 0, 0, 0, 0, 0, 0, 0, 64, 3, 102, 105, 102, 116, 104, 0, 23, 0, 0, 0, 2, 118, 0, 2, 0, 0, 0, 101, 0, 2, 102, 0, 2, 0, 0, 0, 105, 0, 0, 3, 102, 111, 117, 114, 116, 104, 0, 5, 0, 0, 0, 0, 2, 116, 104, 105, 114, 100, 0, 6, 0, 0, 0, 116, 104, 114, 101, 101, 0, 16, 102, 105, 114, 115, 116, 0, 1, 0, 0, 0, 0}, map[string]string{})
 	assertTrue(err == nil, "failed parsing BSON obj", t)
 
-	conn, err := Connect("127.0.0.1")
+	conn, err := Connect("127.0.0.1",27017)
 	assertTrue(err == nil && conn != nil, fmt.Sprintf("failed connecting to mongo: %v", err), t)
 
 	db := conn.GetDB("go_driver_tests")
@@ -32,7 +34,7 @@ func TestStuff(t *testing.T) {
 
 	coll.Insert(obj)
 
-	q, _ := Marshal(map[string]string{})
+	q, _ := Marshal(map[string]string{},_natreps{})
 	ret, err := coll.FindAll(q)
 	assertTrue(err == nil && ret != nil, "query succeeded", t)
 
@@ -47,19 +49,19 @@ func TestStuff(t *testing.T) {
 	count, err := coll.Count(q)
 	assertTrue(count == 1, "count", t)
 
-	newDoc, _ := Marshal(map[string]string{"first": "one", "second": "two", "third": "three"})
+	newDoc, _ := Marshal(map[string]string{"first": "one", "second": "two", "third": "three"},_natreps{})
 	coll.Update(q, newDoc)
 	doc, _ = coll.FindOne(q)
 	assertTrue(doc.Get("first").String() == "one", "update", t)
 
-	rem, _ := Marshal(map[string]string{"third": "three"})
+	rem, _ := Marshal(map[string]string{"third": "three"},_natreps{})
 	coll.Remove(rem)
 	doc, err = coll.FindOne(rem)
 	assertTrue(err != nil, "remove", t)
 
 	coll.Drop()
 
-	statusCmd, _ := Marshal(map[string]float64{"serverStatus": 1})
+	statusCmd, _ := Marshal(map[string]float64{"serverStatus": 1},_natreps{})
 	status, _ := db.Command(statusCmd)
 	assertTrue(status.Get("uptime").Number() != 0, "valid serverStatus", t)
 
@@ -67,13 +69,19 @@ func TestStuff(t *testing.T) {
 }
 
 func TestOtherStuff(t *testing.T) {
-	doc, _ := Marshal(map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."})
-	conn, _ := Connect("127.0.0.1")
-	collection := conn.GetDB("test").GetCollection("test_collection")
-	collection.Insert(doc)
+	data := map[string]string{"_id": "doc1", "title": "A Mongo document", "content": "Testing, 1. 2. 3."}
+	doc, _ := Marshal(data,_natreps{})
+	conn, _ := Connect("127.0.0.1",27017)
+	
+	col := conn.GetDB("test").GetCollection("test_collection")
+	// remove existing first
+	col.Drop()
+	col.Insert(doc)
 
-	query, _ := Marshal(map[string]string{"_id": "doc1"})
-	got, _ := collection.FindOne(query)
+	query, _ := Marshal(map[string]string{"_id": "doc1"},_natreps{})
+	got, err := col.FindOne(query)
+	
+	assertTrue(err == nil, "cannot find", t)
 	assertTrue(Equal(doc, got), "equal", t)
 }
 
@@ -83,13 +91,14 @@ type bin struct {
 }
 
 func TestBinary(t *testing.T) {
-	doc, _ := Marshal(&bin{"doc1", []byte{0,1,2,3,4,5,6,7,8,9}})
-	conn, _ := Connect("127.0.0.1")
-	collection := conn.GetDB("test").GetCollection("test_collection")
-	collection.Insert(doc)
+	doc, _ := Marshal(&bin{"doc1", []byte{0,1,2,3,4,5,6,7,8,9}},_natreps{})
+	conn, _ := Connect("127.0.0.1",27017)
+	col := conn.GetDB("test").GetCollection("test_collection")
+	col.Drop()
+	col.Insert(doc)
 
-	query, _ := Marshal(map[string]string{"id": "doc1"})
-	got, _ := collection.FindOne(query)
+	query, _ := Marshal(map[string]string{"id": "doc1"},_natreps{})
+	got, _ := col.FindOne(query)
 	assertTrue(Equal(doc.Get("bin"), got.Get("bin")), "bin equal", t)
 }
 
@@ -109,7 +118,7 @@ func timeIt(s string, f func(*Collection, *testing.T), coll *Collection, t *test
 }
 
 func TestBenchmark(t *testing.T) {
-	conn, err := Connect("127.0.0.1")
+	conn, err := Connect("127.0.0.1",27017)
 	if err != nil {
 		t.Error("failed connecting")
 	}
@@ -149,7 +158,7 @@ func singleInsertSmall(coll *Collection, t *testing.T) {
 	ss := &smallStruct{0}
 	for i := 0; i < PER_TRIAL; i++ {
 		ss.X = i
-		obj, err := Marshal(ss)
+		obj, err := Marshal(ss,_natreps{})
 		if err != nil {
 			t.Errorf("singleInsertSmall Marshal: %v\n", err)
 		}
@@ -163,7 +172,7 @@ func singleInsertSmall(coll *Collection, t *testing.T) {
 
 func findOneSmall(coll *Collection, t *testing.T) {
 	ss := &smallStruct{PER_TRIAL / 2}
-	obj, err := Marshal(ss)
+	obj, err := Marshal(ss,_natreps{})
 	if err != nil {
 		t.Errorf("findOneSmall Marshal: %v\n", err)
 	}
@@ -188,7 +197,7 @@ func singleInsertMedium(coll *Collection, t *testing.T) {
 	ms := &mediumStruct{5, 5.05, false, []string{"test", "benchmark"}, 0}
 	for i := 0; i < PER_TRIAL; i++ {
 		ms.X = i
-		obj, err := Marshal(ms)
+		obj, err := Marshal(ms,_natreps{})
 		if err != nil {
 			t.Errorf("singleInsertMedium Marshal: %v\n", err)
 		}
@@ -202,7 +211,7 @@ func singleInsertMedium(coll *Collection, t *testing.T) {
 
 func findOneMedium(coll *Collection, t *testing.T) {
 	ss := &smallStruct{PER_TRIAL / 2}
-	obj, err := Marshal(ss)
+	obj, err := Marshal(ss,_natreps{})
 	if err != nil {
 		t.Errorf("findOneMedium Marshal: %v\n", err)
 	}
@@ -217,7 +226,7 @@ func findOneMedium(coll *Collection, t *testing.T) {
 
 func findOne(coll *Collection, t *testing.T) {
 	ss := &smallStruct{PER_TRIAL / 2}
-	obj, err := Marshal(ss)
+	obj, err := Marshal(ss,_natreps{})
 	if err != nil {
 		t.Errorf("findOne Marshal: %v\n", err)
 	}
@@ -268,7 +277,7 @@ func singleInsertLarge(coll *Collection, t *testing.T) {
 
 	for i := 0; i < PER_TRIAL; i++ {
 		ls.X = i
-		obj, err := Marshal(ls)
+		obj, err := Marshal(ls,_natreps{})
 		if err != nil {
 			t.Errorf("singleInsertLarge Marshal: %v", err)
 		}

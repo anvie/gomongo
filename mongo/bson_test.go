@@ -52,7 +52,7 @@ func TestSerializeAndDeserialize(t *testing.T) {
 
 func TestUnmarshal(t *testing.T) {
 	var es ExampleStruct
-	Unmarshal(b, &es)
+	Unmarshal(b, &es,_natreps{})
 	assertTrue(es.First == 1, "unmarshal int", t)
 	assertTrue(es.Second == 2, "unmarshal float64", t)
 	assertTrue(es.Third == "three", "unmarshal string", t)
@@ -62,12 +62,13 @@ func TestUnmarshal(t *testing.T) {
 func TestIdHandling(t *testing.T) {
 	ei := ExampleWithId{Id_:"fooid", Other: "bar"}
 	// verify Id_ gets turned into _id
-	parsed, err := Marshal(ei)
+	parsed, err := Marshal(ei,_natreps{})
 	assertTrue(err == nil, "cannot marshal", t)
+
 	assertTrue(parsed.Get("_id").String() == "fooid", "no _id", t)
 	// ...and vice-versa
 	var back ExampleWithId
-	err = Unmarshal(parsed.Bytes(), &back)
+	err = Unmarshal(parsed.Bytes(), &back,_natreps{})
 	assertTrue(err == nil, "cannot unmarshal", t)
 	assertTrue(back.Id_ == "fooid", "no _id back", t)
 }
@@ -78,26 +79,26 @@ type ExampleStruct2 struct {
 
 func TestMarshal(t *testing.T) {
 	var es1 ExampleStruct
-	Unmarshal(b, &es1)
-	bs1, _ := Marshal(&es1)
+	Unmarshal(b, &es1,_natreps{})
+	bs1, _ := Marshal(&es1,_natreps{})
 	bs2, _ := BytesToBSON(b, map[string]string{})
 	assertTrue(Equal(bs1, bs2), "unmarshal->marshal", t)
 
 	m := map[string]string{"f": "i", "v": "e"}
-	bs3, _ := Marshal(&m)
+	bs3, _ := Marshal(&m,_natreps{})
 	assertTrue(Equal(bs3, bs2.Get("fifth")), "marshal map", t)
 
-	arr, _ := Marshal([]int{1, 2, 3})
+	arr, _ := Marshal([]int{1, 2, 3},_natreps{})
 	assertTrue(arr.Elem(0).Long() == 1, "array marshal (0)", t)
 	assertTrue(arr.Elem(1).Long() == 2, "array marshal (1)", t)
 	assertTrue(arr.Elem(2).Long() == 3, "array marshal (2)", t)
 
 	d := time.UTC()
 	es2 := &ExampleStruct2{d}
-	bs2, _ = Marshal(es2)
+	bs2, _ = Marshal(es2,_natreps{})
 	assertTrue(bs2.Get("date").Date().Seconds() == d.Seconds(), "date marshal", t)
 	es2 = new(ExampleStruct2)
-	Unmarshal(bs2.Bytes(), es2)
+	Unmarshal(bs2.Bytes(), es2,_natreps{})
 	assertTrue(es2.Date.Seconds() == d.Seconds(), "date unmarshal", t)
 }
 
